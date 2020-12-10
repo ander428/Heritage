@@ -4,7 +4,7 @@ from classes.data import starve_str, unhappy_str, line_ending
 
 
 class Village():
-    def __init__(self, name, starting_tech, num_farmers, num_artists, num_scientists, num_knights):
+    def __init__(self, name, starting_tech, num_farmers, num_artists, num_scientists, num_knights, companion_name=None):
         self.farmers = [Villager(starting_tech, "farmer") for _ in range(num_farmers)]
         self.artists = [Villager(starting_tech, "artist") for _ in range(num_artists)]
         self.scientists = [Villager(starting_tech, "scientist") for _ in range(num_scientists)]
@@ -12,8 +12,8 @@ class Village():
         self.dead_villagers = {"farmers": [],
                                "artists": [], "scientists": [], "knights": []}
 
-        self.wheat = 30
-        self.happiness = 30
+        self.wheat = 100
+        self.happiness = 100
         self.science = 0
         self.strength = 0
 
@@ -21,6 +21,7 @@ class Village():
         self.new_tech = 10
         self.name = name
         self.notifications = []
+        self.companion_name = companion_name
 
         self.strength = sum([knight.value for knight in self.knights]) # strength is gained immediately from knights
 
@@ -29,60 +30,64 @@ class Village():
         fmt = '{:<20}{:<20}{:<20}{}'
 
         output = f"---{self.name}---" + line_ending
-        output += fmt.format('Population:', 'Resources:',
-                             'Production:', "Usage:") + line_ending
+        if self.isAlive:
+            output += fmt.format('Population:', 'Resources:',
+                                'Production:', "Usage:") + line_ending
 
-        population = [f"{len(self.farmers)} farmers", f"{len(self.artists)} artists",
-                      f"{len(self.scientists)} scientists", f"{len(self.knights)} knights"]
-        resources = [f"{self.wheat} wheat", f"{self.happiness} happiness",
-                     f"{self.science} science", f"{self.strength} strength"]
-        usage = [f"{self.population()} wheat", f"{math.ceil(self.population() / 2)} happiness",
-                "", ""]
-        farmer_value, artist_value, scientist_value, knight_value = self.get_class_values()
-        production = [
-            f"{farmer_value*len(self.farmers)} wheat", f"{artist_value*len(self.artists)} art",
-            f"{scientist_value*len(self.scientists)} science", ""]
+            population = [f"{len(self.farmers)} farmers", f"{len(self.artists)} artists",
+                        f"{len(self.scientists)} scientists", f"{len(self.knights)} knights"]
+            resources = [f"{self.wheat} wheat", f"{self.happiness} happiness",
+                        f"{self.science} science", f"{self.strength} strength"]
+            farmer_value, artist_value, scientist_value, knight_value = self.get_class_values()
+            production = [f"{farmer_value*len(self.farmers)} wheat", f"{artist_value*len(self.artists)} happiness",
+                f"{scientist_value*len(self.scientists)} science", ""]
+            usage = [f"{self.population()} wheat", f"{math.ceil(self.population() / 2)} happiness",
+                    "", ""]
 
-        for i, (villager, resource, prod, drain) in enumerate(zip(population, resources, production, usage)):
-            output += fmt.format(villager, resource, prod, drain) + line_ending
+            for i, (villager, resource, prod, drain) in enumerate(zip(population, resources, production, usage)):
+                output += fmt.format(villager, resource, prod, drain) + line_ending
 
-        output += line_ending + \
-            f"Total Population: {self.population()}" + line_ending
+            output += line_ending + \
+                f"Total Population: {self.population()}" + line_ending
 
-        output += line_ending
+            output += line_ending
 
-        output += "Notifications:" + line_ending
+            if self.companion_name:
+                output += f"Message from {self.companion_name}:" + line_ending
 
-        for notif in self.notifications:
-            output += notif + line_ending
+                for notif in self.notifications:
+                    output += notif + line_ending
 
-        for villager_class in self.dead_villagers.keys():
-            starve = 0
-            unhappy = 0
-            for villager in self.dead_villagers[villager_class]:
-                if villager.death_case == starve_str:
-                    starve += 1
+                for villager_class in self.dead_villagers.keys():
+                    starve = 0
+                    unhappy = 0
+                    for villager in self.dead_villagers[villager_class]:
+                        if villager.death_case == starve_str:
+                            starve += 1
+                        else:
+                            unhappy += 1
+
+                    if starve > 0:
+                        output += f"{starve} {villager_class} {starve_str}." + line_ending
+
+                    if unhappy > 0:
+                        output += f"{unhappy} {villager_class} {unhappy_str}." + line_ending
+
+                self.reset_notifs()
+
+                if self.wheat < self.population() + 5:
+                    output += "Wheat is low! Villagers may soon require more wheat!" + line_ending
+
+                if self.happiness < math.ceil(self.population() / 2) + 5:
+                    output += "Happiness is low! Villagers want more artists or they may leave!" + line_ending
+
+                if self.science < self.new_tech:
+                    output += f"{self.new_tech-self.science} more science needed for a technological breakthrough!" + line_ending
                 else:
-                    unhappy += 1
-
-            if starve > 0:
-                output += f"{starve} {villager_class} {starve_str}." + line_ending
-
-            if unhappy > 0:
-                output += f"{unhappy} {villager_class} {unhappy_str}." + line_ending
-
-        self.reset_notifs()
-
-        if self.wheat < self.population() + 5:
-            output += "Wheat is low! Villagers may soon require more wheat!" + line_ending
-
-        if self.happiness < math.ceil(self.population() / 2) + 5:
-            output += "Happiness is low! Villagers want more artists or they may leave!" + line_ending
-
-        if self.science < self.new_tech:
-            output += f"{self.new_tech-self.science} more science needed for a technological breakthrough!" + line_ending
+                    output += "You will make a technological breakthrough next turn!" + line_ending
+        
         else:
-            output += "You will make a technological breakthrough next turn!" + line_ending
+            output += "This village has died off." + line_ending
 
         return output
 
@@ -96,7 +101,6 @@ class Village():
 
     def cap_population(self):
         while self.population() > self.wheat or self.population() > self.happiness:
-            print(self.population(), self.wheat, self.happiness)
             chance = random.random()
 
             if chance <= 0.25 and len(self.farmers) > 0:
@@ -114,10 +118,14 @@ class Village():
                 villager.death_case = starve_str if self.population() > self.wheat else unhappy_str
                 self.dead_villagers['scientists'].append(villager)
 
-            elif chance > 0.75 and len(self.knights) > 0:
+            elif len(self.knights) > 0:
                 villager = self.knights.pop()
                 villager.death_case = starve_str if self.population() > self.wheat else unhappy_str
                 self.dead_villagers['knights'].append(villager)
+            
+            if self.population() == 0:
+                self.isAlive = False
+                break
 
     def improve_technology(self):
         self.new_tech *= round(self.new_tech / 2)
@@ -144,17 +152,17 @@ class Village():
             for knight in self.knights:
                 knight.value += 1
 
-    def grow(self, num_farmers, num_artists, num_scientists, num_knights):
+    def grow(self, class_type):
         farmer_value, artist_value, scientist_value, knight_value = self.get_class_values()
 
-        self.farmers += [Villager(farmer_value, "farmers")
-                         for _ in range(num_farmers)]
-        self.artists += [Villager(artist_value, "farmers")
-                         for _ in range(num_artists)]
-        self.scientists += [Villager(scientist_value, "farmers")
-                            for _ in range(num_scientists)]
-        self.knights += [Villager(knight_value, "farmers")
-                         for _ in range(num_knights)]
+        if class_type == "farmer":
+            self.farmers.append(Villager(farmer_value, class_type))
+        elif class_type == "artist":
+            self.artists.append(Villager(artist_value, class_type))
+        elif class_type == "scientist":
+            self.scientists.append(Villager(scientist_value, class_type))
+        elif class_type == "knight":
+            self.knights.append(Villager(knight_value, class_type))
 
     def develop(self):
         if self.isAlive:
@@ -166,10 +174,10 @@ class Village():
             self.wheat -= self.population()
             self.happiness -= math.ceil(self.population() / 2)
 
-            if self.wheat < 0:
-                self.isAlive = False
-
             self.cap_population()
+
+            if self.population() == 0:
+                self.isAlive = False
 
             if self.science >= self.new_tech:
                 self.improve_technology()
@@ -193,7 +201,6 @@ class Village():
             knight_value = self.knights[0].value
 
         return farmer_value, artist_value, scientist_value, knight_value
-
 
 class Villager():
     def __init__(self, initial_value, class_type):

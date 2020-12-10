@@ -1,9 +1,9 @@
 from classes.Village import *
-from classes.Simulation import HeritageGame
+from classes.Simulation import Simulation
 
-game = HeritageGame(10)
+heritage_game = Simulation(20, 1)
 
-game.main_menu()
+heritage_game.main_menu()
 
 # a = [Villager(3, "farmer") for i in range(2)]
 # b = [Villager(3, "artist") for i in range(1)]
