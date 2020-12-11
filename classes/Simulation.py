@@ -16,7 +16,7 @@ class Simulation:
 
             print("Please select an option:")
             print("1 - Play the game")
-            print("2 - View the GA algorithm solutions (pssst this is cheating)")
+            print("2 - View how the AI algorithm works (pssst this is cheating)")
             print("3 - Quit")
             print()
 
@@ -24,7 +24,7 @@ class Simulation:
             if option == 1:
                 self.play_game()
             elif option == 2:
-                self.show_GA()
+                self.show_AI()
             elif option == 3:
                 break
             else:
@@ -278,3 +278,51 @@ class Simulation:
     def print_country(self, country):
         for village in country:
             print(village)
+
+    def show_AI(self):
+        print("Hello! Here is where I will explain how the AI makes decisions. First lets make an example." + line_ending)
+        input("Press Enter to continue: ")
+        print()
+        example = AI(f"Josh's Valley", self.difficulty+1, *[8,3,7,2], [5,5,3,7])
+        print(example)
+        print("This is an AI for Harvest. There is actually some more data behind the scenes as well so lets take a look at that as well." + line_ending)
+        input("Press Enter to continue: ")
+        print()
+        print(f"Difficulty: {self.difficulty+1}" + line_ending + f"Attack Frequency: {AI_attack_freq*100}%" + line_ending + f"Bayesian Priors: {[5,5,3,7]}" + line_ending)
+        print("First off the difficulty setting changes the starting technology level of the AI, i.e., changes the productivity of the villagers at the start.")
+        print("Attack frequency is the random chance that the village may attack. Each turn, it rolls a die to decide whether it will attack and randomly chooses a target.")
+        print("The bayesian priors are weights unique to each AI that are assumptions the AI makes about the player." + line_ending + 
+                "Here, it assumes the player will start with 5 farmers, 5 knights, 3 scientists, and 7 knights.")
+        print()
+        input("Press Enter to learn how the AI chooses villagers: ")
+        print()
+        fmt = '{:<20}{}'
+        output = f"---{example.name}---" + line_ending
+        output += fmt.format('Production:', "Usage:") + line_ending
+        farmer_value, artist_value, scientist_value, knight_value = example.get_class_values()
+        production = [f"{farmer_value*len(example.farmers)} wheat", f"{artist_value*len(example.artists)} happiness",
+            f"{scientist_value*len(example.scientists)} science", ""]
+        usage = [f"{example.population()} wheat", f"{math.ceil(example.population() / 3)} happiness",
+                "", ""]
+
+        for i, (prod, drain) in enumerate(zip(production, usage)):
+            output += fmt.format(prod, drain) + line_ending
+        print(output)
+        print("It will first be constrained by net production of wheat and happiness. If negative, it will prioritize farmers and artists.")
+        print("Otherwise, it will weight the best move by sum(priors) / prior_i for each class meaning it will expect the player to add villagers " + 
+                "in roles they do not already have." + line_ending)
+        print("When a player makes a move, it will then update its priors to be more accurate to the player's actual decisions.")
+        print("Here since the net production is in the negative for both wheat and happiness, it will choose either an artist or a farmer." + line_ending)
+        input("Press Enter to see how the AI counters the player: ")
+        print()
+        output = fmt.format("Player Move:", "Counter:") + line_ending
+        for key, value in AI_counters.items():
+            output += fmt.format(key, value) + line_ending
+        print(output)
+        print(f"This is the counter lookup table the AI uses. For example, the AI predicts the player will add a knight, it will, constraints permitting, choose a {AI_counters['knight']}.")
+        print()
+        print("That is all! There are other smaller changes to the AI from a player controlled village, but those can all be viewed in AI.py." + line_ending)
+        input("Press Enter to return to main menu: ")
+        print()
+
+  
