@@ -30,6 +30,7 @@ class Village():
         self.strength = sum([knight.value for knight in self.knights]) # strength is gained immediately from knights
 
     # override print function
+    # prints out village stats
     def __str__(self):
         fmt = '{:<20}{:<20}{:<20}{}'
 
@@ -102,6 +103,7 @@ class Village():
 
         return output
 
+    # empties notification data
     def reset_notifs(self):
         self.notifications = []
         self.dead_villagers = {"farmers": [],
@@ -109,13 +111,12 @@ class Village():
         self.transfered_villagers = {"farmers": [],
                                "artists": [], "scientists": [], "knights": []}
 
+    # returns the total population
     def population(self):
         return (len(self.farmers) + len(self.artists) + len(self.scientists) + len(self.knights))
 
+    # continuously randomly kills a villager until population does not exceed resources
     def cap_population(self):
-        harvest = self.wheat - self.population()
-
-
         while self.population() > self.wheat or self.population() > self.happiness:
             chance = random.random()
 
@@ -142,18 +143,21 @@ class Village():
             if self.population() == 0:
                 self.isAlive = False
                 break
-
+    
+    # transfers villagers from the current village to another
     def transfer_population(self, other_village, condition):
-        val_1 = condition[0]
-        val_2 = condition[1]
+        val_1 = condition[0] # other village strength
+        val_2 = condition[1] # current village strength
         foreign_msg = condition[2]
         local_msg = condition[3]
 
         farmer_val, artist_val, scientist_val, knight_val = other_village.get_class_values()
 
+        # transfer the number of people based off of net strength
         while val_1 > val_2:
             chance = random.random()
 
+            # transfer a farmer to other village
             if chance <= 0.25 and len(self.farmers) > 0:
                 villager = self.farmers.pop()
                 villager.value = farmer_val
@@ -164,7 +168,7 @@ class Village():
                 villager.death_case = local_msg
                 self.transfered_villagers['farmers'].append(villager)
                 val_1 -= 1
-
+            # transfer an artist to other village
             elif chance > 0.25 and chance <= 0.5 and len(self.artists) > 0:
                 villager = self.artists.pop()
                 villager.value = artist_val
@@ -175,7 +179,7 @@ class Village():
                 villager.death_case = local_msg
                 self.transfered_villagers['artists'].append(villager)
                 val_1 -= 1
-
+            # transfer a scientist to other village
             elif chance > 0.5 and chance <= 0.75 and len(self.scientists) > 0:
                 villager = self.scientists.pop()
                 villager.value = scientist_val
@@ -186,7 +190,7 @@ class Village():
                 villager.death_case = local_msg
                 self.transfered_villagers['scientists'].append(villager)
                 val_1 -= 1
-
+            # transfer a knight to other village
             elif len(self.knights) > 0:
                 villager = self.knights.pop()
                 villager.value = knight_val
@@ -197,14 +201,16 @@ class Village():
                 villager.death_case = local_msg
                 self.transfered_villagers['knights'].append(villager)
                 val_1 -= 1
-            
+            # if population has been diminished, kill village
             if self.population() == 0:
                 self.isAlive = False
                 break
     
+    # transfer resources from the current village to another
     def transfer_resources(self, village):
-        steal_perc = 0.1
+        steal_perc = 0.1 # proportion of the resource that is stolen
 
+        # randomly choose one resource to steal that is not empty
         while True:
             chance = random.random()
             if chance <= 0.25 and self.wheat > 0:
@@ -235,10 +241,12 @@ class Village():
                 village.notifications.append("We were not able to steal any resources!")
                 break
 
-
+    # improves the value of each villager
     def improve_technology(self):
         self.new_tech *= 3
 
+        # choose one class of villager to improve tech
+        # village must contain at least 1 villager to improve their tech
         while True:
             chance = random.random()
             if chance <= 0.25 and len(self.farmers) > 0:
@@ -261,7 +269,8 @@ class Village():
                 for knight in self.knights:
                     knight.value += 1
                 break
-
+    
+    # add selected class to grow
     def grow(self, class_type):
         farmer_value, artist_value, scientist_value, knight_value = self.get_class_values()
 
@@ -274,24 +283,31 @@ class Village():
         elif class_type == "knight":
             self.knights.append(Villager(knight_value, class_type))
 
+    # iterate the village
     def develop(self):
         if self.isAlive:
+            # refill resources through producers
             self.wheat += sum([farmer.value for farmer in self.farmers])
             self.happiness += sum([artist.value for artist in self.artists])
             self.science += sum([scientist.value for scientist in self.scientists])
             self.strength = sum([knight.value for knight in self.knights])
 
+            # kill off population that exceeds resources
             self.cap_population()
 
+            # consume resources
             self.wheat -= self.population()
             self.happiness -= math.ceil(self.population() / 3)
 
+            # kill village if population dies
             if self.population() == 0:
                 self.isAlive = False
 
+            # improve tech if enough science
             if self.science >= self.new_tech:
                 self.improve_technology()
 
+    # logic for attacking another village
     def attack(self, village):
         # attack fails
         if village.strength > self.strength:
@@ -318,6 +334,8 @@ class Village():
             village.transfer_population(self, transfer_condition)
             village.transfer_resources(self)
 
+    # get the value for a given class. 
+    # if no villagers in a class, return starting value
     def get_class_values(self):
         farmer_value = self.starting_tech
         artist_value = self.starting_tech
@@ -338,6 +356,7 @@ class Village():
 
         return farmer_value, artist_value, scientist_value, knight_value
 
+# data structure to hold villager data
 class Villager():
     def __init__(self, initial_value, class_type):
         self.value = initial_value

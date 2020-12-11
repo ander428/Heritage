@@ -10,6 +10,8 @@ class AI(Village):
         # AI's prediction of what the player's starting population will be
         self.bayes_priors = {"farmer": priors[0], "artist": priors[1], "scientist": priors[2], "knight": priors[3]}
     
+    # override print function
+    # prints reduced stats
     def __str__(self):
         fmt = '{}'
 
@@ -29,6 +31,7 @@ class AI(Village):
         
         return output
 
+    # generate predicted player move
     def predict(self):
         # generate normalized antithetical probabilities of each class
         # if a player has chosen more of one class, they are likely not to choose that class again
@@ -36,10 +39,13 @@ class AI(Village):
         [choice] = random.choices(list(self.bayes_priors.keys()), weights)
         return choice
 
+    # override growth logic
     def grow(self, player_move):
+        # only update priors if player made a selection
         if player_move != "none":
             self.bayes_priors[player_move] += 1
         
+        # get production and usage stats
         farmer_value, artist_value, scientist_value, knight_value = self.get_class_values()
         production = [farmer_value*len(self.farmers), artist_value*len(self.artists)]
         usage = [self.population(), math.ceil(self.population() / 2)]
@@ -54,6 +60,7 @@ class AI(Village):
             self.farmers.append(Villager(farmer_value, 'farmer'))
         elif production[1] < usage[1]:
             self.artists.append(Villager(artist_value, 'artist'))
+
         # constraints met
         else:
             predict_move = self.predict()
@@ -68,6 +75,7 @@ class AI(Village):
             elif new_villager.class_type == "knight":
                 self.knights.append(new_villager)
 
+    # helper function to find a valid target to attack
     def find_target_idx(self, country):
         try:
             i = random.randint(0, len(country)-1)
@@ -78,12 +86,3 @@ class AI(Village):
             return 1
         
         return i
-
-
-
-# test = AI("test", 2, 5,5,5,5,[40, 20, 40, 50])
-
-# print(test)
-# test.grow()
-# print(test)
-

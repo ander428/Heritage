@@ -125,6 +125,7 @@ class Simulation:
         count = 1
         play_game = True
         while play_game:
+            # if all villages except player have died, then player wins
             if self.win_condition(country):
                 print(f"Success! You have done a great job leading {player_name}. We have grown large enough to inhabit the whole country!" + line_ending)
                 input("Press enter to return to main menu: ")
@@ -132,10 +133,10 @@ class Simulation:
 
             print(f"YEAR {count}")
             self.print_country(country)
-
-            read_player_vals = country[len(country)-1]
+    
+            read_player_vals = country[len(country)-1] # read only reference for player this turn
             if read_player_vals.isAlive:
-                player_move = self.player_move(read_player_vals, country)
+                player_move = self.player_move(read_player_vals, country) # player moves
 
                 if player_move == 'quit':
                     print(f"You are resigning as our leader? What will we do now?" + line_ending)
@@ -143,14 +144,15 @@ class Simulation:
                     print()
                     break
             
-                
                 elif not player_move:
                     player_move = 'none'
-                self.AI_move(player_name, player_move, country)
+                    
+                self.AI_move(player_name, player_move, country) # every AI moves
    
-                [village.develop() for village in country]
+                [village.develop() for village in country] # developes every village including player
 
                 count += 1
+            # player died
             else:
                 print("You have failed! Your village has died off! Others will inhabit" +
                         f" the world without {player_name}.")
@@ -159,6 +161,7 @@ class Simulation:
                 print()
                 play_game = False
 
+    # introduction where player creates village
     def introduction(self, player_name, companion_name):
         print(f"Welcome! My name is {companion_name}, and I am honored to appoint you as the new leader of our village, {player_name}!" + line_ending +
                 "Before I leave you to your duties, I must inform you on where your leadership will be of utmost importance." + line_ending)
@@ -172,6 +175,7 @@ class Simulation:
 
         return player
 
+    # check if player is the last alive
     def win_condition(self, country):
         for i in range(len(country)-1):
             if country[i].isAlive:
@@ -179,6 +183,7 @@ class Simulation:
         
         return True
 
+    # logic for the player to take their turn
     def player_move(self, read_player_vals, country):
         valid_roles = ['farmer', 'artist', 'scientist', 'knight', 'none']
 
@@ -192,23 +197,29 @@ class Simulation:
             option = self.get_int_input("Selection: ", min_val=1, max_val=3)
             print()
 
+            # player can only attack if they have 5 or more knights. Reask input if condition not met.
             if option == 1 and len(read_player_vals.knights) < 5:
                 print(line_ending + "We do not have enough of an army to fight!" + line_ending)
             else:
                 break
-
+        
+        # attack another village
         if option == 1:
+            # cannot attack yourself, a villge you just attacked, or a dead village
             valid_options = [village.name.lower() for village in country if village.name != read_player_vals.name and village.isAlive and village.name != self.prev_attack]
             move = self.get_str_input("Enter the name of the village you would like to attack: ", 
-                                                "We do not know of such village! Maybe a different one?", valid_responses=valid_options)
+                                                "I am not sure we can do that! Maybe a different one?", valid_responses=valid_options)
             target = 0
 
+            # get index of selected village
             for i in range(len(country)):
                 if country[i].name.lower() == move.lower():
                     target = i
 
             country[len(country)-1].attack(country[target])
             return country[target].name
+
+        # grow village
         elif option == 2:
             move = self.get_str_input("You may grow your workforce by 1 villager! Which would you like to add (farmer, artist, scientist, knight, none)? ", 
                                         "Curious, that is not a role in your village. Maybe try another one.", valid_responses=valid_roles)
@@ -220,11 +231,15 @@ class Simulation:
         else:
             return 'quit'
 
+    # logic for AI turns
     def AI_move(self, player_name, player_move, country):
         for i in range(len(country)):
+            # ignore the player when iterating country
             if country[i].name == player_name:
                 continue
+            # only move if current village is alive
             elif country[i].isAlive:
+                # decide whether to attack
                 if random.random() < AI_attack_freq and len(country[i].knights) >= 5:
                     while True:
                         target = country[i].find_target_idx(country)
@@ -235,6 +250,7 @@ class Simulation:
                 else:
                     country[i].grow(player_move)
 
+    # helper function to get easy valid int input
     def get_int_input(self, input_msg, max_val=None, min_val=None):
         result = 0
         while True:
@@ -256,6 +272,7 @@ class Simulation:
 
         return result
 
+    # helper function to get easy valid str input
     def get_str_input(self, input_msg, err_msg, valid_responses=None):
         result = 0
         while True:
@@ -275,10 +292,12 @@ class Simulation:
 
         return result
 
+    # prints every village in the country
     def print_country(self, country):
         for village in country:
             print(village)
 
+    # walkthrough of the different aspects of the AI
     def show_AI(self):
         print("Hello! Here is where I will explain how the AI makes decisions. First lets make an example." + line_ending)
         input("Press Enter to continue: ")
