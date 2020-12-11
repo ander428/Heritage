@@ -9,11 +9,11 @@ class Simulation:
         self.difficulty = difficulty
 
     def main_menu(self):
-        print(title + line_ending)
-        print("Welcome settler! Prepare to breed generations of your village stronger than any other!" + line_ending)
-        print(game_desc(line_ending) + line_ending)
-
         while True:
+            print(title + line_ending)
+            print("Welcome settler! Prepare to breed generations of your village stronger than any other!" + line_ending)
+            print(game_desc(line_ending) + line_ending)
+
             print("Please select an option:")
             print("1 - Play the game")
             print("2 - View the GA algorithm solutions (pssst this is cheating)")
@@ -43,6 +43,9 @@ class Simulation:
 
         # set village name
         player_name = self.get_str_input("What is the name of your village? ", "")
+
+        # set difficulty
+        self.difficulty = self.get_int_input("What difficulty would you like to play (1-3)? ", min_val=1, max_val=3)
 
         num_enemies = self.get_int_input("How many other villages surround you (1-5)? ", max_val=5, min_val=1)
 
@@ -105,46 +108,46 @@ class Simulation:
 
         # create AI
         enemies = []
-        enemies.append(AI(f"{names[0]}'s Empire", self.difficulty, *[8,2,2,8], [5,4,1,10]))
-        enemies.append(AI(f"{names[1]}'s Grasslands", self.difficulty, *[15,5,0,0], [10,5,4,1]))
-        enemies.append(AI(f"{names[2]}'s Monastery", self.difficulty, *[10,10,0,0], [5,4,10,1]))
-        enemies.append(AI(f"{names[3]}'s Valley", self.difficulty, *[8,8,2,2], [5,5,1,9]))
-        enemies.append(AI(f"{names[4]}'s Kingdom", self.difficulty, *[5,5,5,5], [5,5,5,5]))
+        enemies.append(AI(f"{names[0]}'s Empire", self.difficulty+1, *[8,2,2,8], [5,4,1,10]))
+        enemies.append(AI(f"{names[1]}'s Grasslands", self.difficulty+1, *[15,5,0,0], [7,5,4,4]))
+        enemies.append(AI(f"{names[2]}'s Monastery", self.difficulty+1, *[10,10,0,0], [5,4,7,4]))
+        enemies.append(AI(f"{names[3]}'s Valley", self.difficulty+1, *[8,3,7,2], [5,5,3,7]))
+        enemies.append(AI(f"{names[4]}'s Kingdom", self.difficulty+1, *[5,5,5,5], [5,5,5,5]))
 
         # add enemies to the game's country
         [country.append(enemy) for enemy in random.sample(enemies, num_enemies)]
 
         # add player to country
-        print(f"Welcome! My name is {companion_name}, and I am honored to appoint you as the new leader of our village, {player_name}! " + 
-                "Before I leave you to your duties, I must inform you on where your leadership will be of utmost importance." + line_ending)
-        print("First, we must appoint those we can to work on the village." + line_ending)
-        country.append(self.create_player(player_name, companion_name))
-        print("Excellent, we may now get things moving around here!" + line_ending)
-        print("Ah, wait! There is one more thing. I will be right back! I must gather some things for you. ")
-        input("Press Enter when you are ready for me: ")
+        country.append(self.introduction(player_name, companion_name))
+        input("Press Enter to continue: ")
         print()
-        print("Every year the following will happen, and you will make a decision about how to proceed for the next year:" + line_ending)
-        print("\t- Our scouts will inform us of other villages' population." + line_ending +
-                "\t- I personally will be sending you messages about updates around the village to keep you aware of how our people are doing." + line_ending +
-                "\t- A new child will grow old enough to join the workforce. You may decide to give them a role or let them be." + line_ending +
-                "\t- Alternatively, you may need the time to plan an attack another village which if successful, will be a great source of food, art, and new workers." + line_ending)
-        print("That is everything! Good luck!" + line_ending)
 
-        input("Press Enter to start your turn: ")
-
-        valid_roles = ['farmer', 'artist', 'scientist', 'knight', 'none']
         count = 1
         play_game = True
         while play_game:
+            if self.win_condition(country):
+                print(f"Success! You have done a great job leading {player_name}. We have grown large enough to inhabit the whole country!" + line_ending)
+                input("Press enter to return to main menu: ")
+                break
+
             print(f"YEAR {count}")
             self.print_country(country)
 
-            if country[len(country)-1].isAlive:
-                player_move = self.get_str_input("You may grow your workforce by 1 villager! Which would you like to add (farmer, artist, scientist, knight, none)? ", 
-                                            "Curious, that is not a role in your village. Maybe try another one.", valid_responses=valid_roles)
-                player_move = player_move.lower()
+            read_player_vals = country[len(country)-1]
+            if read_player_vals.isAlive:
+                player_move = self.player_move(read_player_vals, country)
 
-                [village.grow(player_move) for village in country]
+                if player_move == 'quit':
+                    print(f"You are resigning as our leader? What will we do now?" + line_ending)
+                    input("Press enter to return to main menu: ")
+                    print()
+                    break
+            
+                
+                elif not player_move:
+                    player_move = 'none'
+                self.AI_move(player_name, player_move, country)
+   
                 [village.develop() for village in country]
 
                 count += 1
@@ -156,6 +159,81 @@ class Simulation:
                 print()
                 play_game = False
 
+    def introduction(self, player_name, companion_name):
+        print(f"Welcome! My name is {companion_name}, and I am honored to appoint you as the new leader of our village, {player_name}!" + line_ending +
+                "Before I leave you to your duties, I must inform you on where your leadership will be of utmost importance." + line_ending)
+        print("First, we must appoint those we can to work on the village." + line_ending)
+        player = self.create_player(player_name, companion_name)
+        print("Excellent, we may now get things moving around here!" + line_ending)
+        print("Ah, wait! There is one more thing. I will be right back! I must gather some things for you. ")
+        input("Press Enter when you are ready for me: ")
+        print()
+        print(turn_info(line_ending))
+
+        return player
+
+    def win_condition(self, country):
+        for i in range(len(country)-1):
+            if country[i].isAlive:
+                return False
+        
+        return True
+
+    def player_move(self, read_player_vals, country):
+        valid_roles = ['farmer', 'artist', 'scientist', 'knight', 'none']
+
+        option = 0
+        while True:
+            print("Would you like to attack a village or grow the workforce?")
+            print("1 - Attack (you must have at least 5 knights)")
+            print("2 - Grow")
+            print("3 - Quit")
+            print()
+            option = self.get_int_input("Selection: ", min_val=1, max_val=3)
+            print()
+
+            if option == 1 and len(read_player_vals.knights) < 5:
+                print(line_ending + "We do not have enough of an army to fight!" + line_ending)
+            else:
+                break
+
+        if option == 1:
+            valid_options = [village.name.lower() for village in country if village.name != read_player_vals.name and village.isAlive and village.name != self.prev_attack]
+            move = self.get_str_input("Enter the name of the village you would like to attack: ", 
+                                                "We do not know of such village! Maybe a different one?", valid_responses=valid_options)
+            target = 0
+
+            for i in range(len(country)):
+                if country[i].name.lower() == move.lower():
+                    target = i
+
+            country[len(country)-1].attack(country[target])
+            return country[target].name
+        elif option == 2:
+            move = self.get_str_input("You may grow your workforce by 1 villager! Which would you like to add (farmer, artist, scientist, knight, none)? ", 
+                                        "Curious, that is not a role in your village. Maybe try another one.", valid_responses=valid_roles)
+            move = move.lower()
+
+            country[len(country)-1].grow(move)
+
+            return move
+        else:
+            return 'quit'
+
+    def AI_move(self, player_name, player_move, country):
+        for i in range(len(country)):
+            if country[i].name == player_name:
+                continue
+            elif country[i].isAlive:
+                if random.random() < AI_attack_freq and len(country[i].knights) >= 5:
+                    while True:
+                        target = country[i].find_target_idx(country)
+                        if country[target].isAlive and country[target].name != country[i].name and country[target].name != country[i].prev_attack:
+                            break
+                    country[i].attack(country[target])
+                    country[i].prev_attack = country[target].name
+                else:
+                    country[i].grow(player_move)
 
     def get_int_input(self, input_msg, max_val=None, min_val=None):
         result = 0
@@ -169,7 +247,7 @@ class Simulation:
                         continue
                 if max_val:
                     if result > max_val:
-                        print(line_ending + "That is too many! Try a smaller number." + line_ending)
+                        print(line_ending + "That is too large! Try a smaller number." + line_ending)
                         continue
                 
                 break
@@ -177,13 +255,6 @@ class Simulation:
                 print(line_ending + "Blasphemy! You must respond with a number, not letters!" + line_ending)
 
         return result
-
-    def win_condition(self, country):
-        for i in range(len(country)-1):
-            if country[i].isAlive:
-                return False
-        
-        return True
 
     def get_str_input(self, input_msg, err_msg, valid_responses=None):
         result = 0
